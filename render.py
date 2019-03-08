@@ -71,9 +71,9 @@ def cross(a, b): # numpy version is slow for 3d vectors
     
 if __name__ == '__main__':
     import time
-    from imageio.core.functions import imwrite, imread
+    import PIL.Image
 
-    width, height = 1000,1000
+    width, height = 1200,1200
     light         = np.array([0,0,-1])
     eye           = np.array([1,1,3])
     center        = np.array([0,0,0])
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     coords = np.mgrid[0:width, 0:height].astype(int)
 
     V, T, Vi, Ti = obj_load("head.obj")
-    texture = imread("uv-grid.png")
+    texture = np.asarray(PIL.Image.open('uv-grid.png'))
     viewport = viewport(32, 32, width-64, height-64, 1000)
     modelview = lookat(eye, center, up)
 
@@ -95,8 +95,8 @@ if __name__ == '__main__':
     
     start = time.time()
     for (i0,i1,i2), (j0,j1,j2) in zip(Vi,Ti):
-        v0,v1,v2 = V[i0], V[i1], V[i2]
-        vs0,vs1,vs2 = Vs[i0], Vs[i1], Vs[i2]
+        v0, v1, v2 = V[i0], V[i1], V[i2]
+        vs0, vs1, vs2 = Vs[i0], Vs[i1], Vs[i2]
         uv0, uv1, uv2 = T[j0], T[j1], T[j2]
 
         n = cross(v2-v0, v1-v0)
@@ -104,7 +104,8 @@ if __name__ == '__main__':
         intensity = np.dot(n, light)
         
         if intensity >= 0:
-            triangle( (vs0,uv0), (vs1,uv1), (vs2,uv2), intensity)
+            triangle((vs0,uv0), (vs1,uv1), (vs2,uv2), intensity)
     end = time.time()
+    
     print("Rendering time: {}".format(end-start))
-    imwrite("output.png", image[::-1,:,:])
+    PIL.Image.fromarray(image[::-1,:,:]).save("output.png")
