@@ -66,20 +66,22 @@ def viewport(x, y, w, h, d):
                      [0, 0, d/2,   d/2],
                      [0, 0, 0,       1]])
 
+def cross(a, b): # numpy version is slow for 3d vectors
+    return (a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0])
+    
 if __name__ == '__main__':
     import time
     from imageio.core.functions import imwrite, imread
 
     width, height = 1000,1000
-    light_dir     = np.array([0,0,-1])
+    light         = np.array([0,0,-1])
     eye           = np.array([1,1,3])
     center        = np.array([0,0,0])
     up            = np.array([0,1,0])
-    
+
     image = np.zeros((height,width,4), dtype=np.uint8)
     zbuffer = -1000*np.ones((height,width))
     coords = np.mgrid[0:width, 0:height].astype(int)
-
 
     V, T, Vi, Ti = obj_load("head.obj")
     texture = imread("uv-grid.png")
@@ -97,12 +99,11 @@ if __name__ == '__main__':
         vs0,vs1,vs2 = Vs[i0], Vs[i1], Vs[i2]
         uv0, uv1, uv2 = T[j0], T[j1], T[j2]
 
-        n = np.cross(v2-v0, v1-v0)
-        n = n / np.linalg.norm(n)
-        intensity = np.dot(n, light_dir)
+        n = cross(v2-v0, v1-v0)
+        n = n / np.sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2])
+        intensity = np.dot(n, light)
         
         if intensity >= 0:
-            color = intensity*255,intensity*255,intensity*255, 255
             triangle( (vs0,uv0), (vs1,uv1), (vs2,uv2), intensity)
     end = time.time()
     print("Rendering time: {}".format(end-start))
