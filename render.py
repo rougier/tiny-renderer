@@ -91,21 +91,21 @@ if __name__ == '__main__':
     V = Vh @ modelview.T           # World coordinates
     Vs = V @ viewport.T            # Screen coordinates
     V, Vs = V[:,:3],  Vs[:,:3]
-
+    V, Vs, UV = V[Vi], Vs[Vi], UV[UVi]
+    
     # Pre-compute tri-linear coordinates
-    T = np.transpose(Vs[Vi], axes=[0,2,1])
+    T = np.transpose(Vs, axes=[0,2,1])
     T[:,2,:] = 1
     T = np.linalg.inv(T)
 
     # Pre-compute normal vectors and intensity
-    N = np.cross(V[Vi][:,2]-V[Vi][:,0], V[Vi][:,1]-V[Vi][:,0])
+    N = np.cross(V[:,2]-V[:,0], V[:,1]-V[:,0])
     N = N / np.linalg.norm(N,axis=1).reshape(len(N),1)
     I = np.dot(N, light)
-    
+
     start = time.time()
-    for t, i, (v0,v1,v2),(vs0,vs1,vs2),(uv0,uv1,uv2) in zip(T, I, V[Vi], Vs[Vi], UV[UVi]):
-        if i >= 0:
-            triangle(t, (vs0,uv0), (vs1,uv1), (vs2,uv2), i)
+    for i in np.argwhere(I>=0)[:,0]:
+        triangle(T[i], (Vs[i,0],UV[i,0]), (Vs[i,1],UV[i,1]), (Vs[i,2],UV[i,2]), I[i])
     end = time.time()
     
     print("Rendering time: {}".format(end-start))
