@@ -6,10 +6,7 @@ def triangle(t, A, B, C, intensity):
     (v0, uv0), (v1, uv1), (v2, uv2) = A, B, C
 
     # Barycentric coordinates of points inside the triangle bounding box
-    # try:
-    #     t = np.linalg.inv([[v0[0],v1[0],v2[0]], [v0[1],v1[1],v2[1]], [1,1,1]])
-    # except np.linalg.LinAlgError:
-    #     return
+    # t = np.linalg.inv([[v0[0],v1[0],v2[0]], [v0[1],v1[1],v2[1]], [1,1,1]])
     xmin = int(max(0,              min(v0[0], v1[0], v2[0])))
     xmax = int(min(image.shape[1], max(v0[0], v1[0], v2[0])+1))
     ymin = int(max(0,              min(v0[1], v1[1], v2[1])))
@@ -32,7 +29,6 @@ def triangle(t, A, B, C, intensity):
     zbuffer[Y, X] = Z
     image[Y, X] = C * (intensity, intensity, intensity, 1)
 
-
 def obj_load(filename):
     V, T, Vi, Ti = [], [], [], []
     with open(filename) as f:
@@ -49,7 +45,6 @@ def obj_load(filename):
                Ti.append([int(indices.split('/')[1]) for indices in values[1:]])
     return np.array(V), np.array(T), np.array(Vi)-1, np.array(Ti)-1
 
-
 def lookat(eye, center, up):
     normalize = lambda x: x/np.linalg.norm(x)
     M = np.eye(4)
@@ -64,9 +59,6 @@ def viewport(x, y, w, h, d):
                      [0, h/2, 0, y+h/2],
                      [0, 0, d/2,   d/2],
                      [0, 0, 0,       1]])
-
-def cross(a, b): # numpy version is slow for 3d vectors
-    return (a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0])
     
 if __name__ == '__main__':
     import time
@@ -80,17 +72,17 @@ if __name__ == '__main__':
 
     image = np.zeros((height,width,4), dtype=np.uint8)
     zbuffer = -1000*np.ones((height,width))
-    coords = np.mgrid[0:width, 0:height].astype(int)
+    coords = np.mgrid[0:width, 0:height]
 
     V, UV, Vi, UVi = obj_load("head.obj")
-    texture = np.asarray(PIL.Image.open('uv-grid.png'))
+    texture = np.asarray(PIL.Image.open("uv-grid.png"))
     viewport = viewport(32, 32, width-64, height-64, 1000)
     modelview = lookat(eye, center, up)
 
     Vh = np.c_[V, np.ones(len(V))] # Homogenous coordinates
     V = Vh @ modelview.T           # World coordinates
     Vs = V @ viewport.T            # Screen coordinates
-    V, Vs = V[:,:3],  Vs[:,:3]
+    V, Vs = V[:,:3],  Vs[:,:3]     # Back to cartesian coordinates
     V, Vs, UV = V[Vi], Vs[Vi], UV[UVi]
     
     # Pre-compute tri-linear coordinates
