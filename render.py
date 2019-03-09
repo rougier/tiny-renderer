@@ -1,22 +1,21 @@
 # Tiny 3D Renderer
 import numpy as np
 
-def triangle(A, B, C, intensity):
+def triangle(t, A, B, C, intensity):
     global coords, texture, image, zbuffer
     (v0, uv0), (v1, uv1), (v2, uv2) = A, B, C
 
     # Barycentric coordinates of points inside the triangle bounding box
-    try:
-        T = np.linalg.inv([[v0[0],v1[0],v2[0]], [v0[1],v1[1],v2[1]], [1,1,1]])
-    except np.linalg.LinAlgError:
-        return
+    # try:
+    #     t = np.linalg.inv([[v0[0],v1[0],v2[0]], [v0[1],v1[1],v2[1]], [1,1,1]])
+    # except np.linalg.LinAlgError:
+    #     return
     xmin = int(max(0,              min(v0[0], v1[0], v2[0])))
     xmax = int(min(image.shape[1], max(v0[0], v1[0], v2[0])+1))
     ymin = int(max(0,              min(v0[1], v1[1], v2[1])))
     ymax = int(min(image.shape[0], max(v0[1], v1[1], v2[1])+1))
-
     P = coords[:, xmin:xmax, ymin:ymax].reshape(2,-1)
-    B = np.dot(T, np.vstack((P, np.ones((1, P.shape[1]), dtype=int))))
+    B = np.dot(t, np.vstack((P, np.ones((1, P.shape[1]), dtype=int))))
 
     # Cartesian coordinates of points inside the triangle
     I = np.argwhere(np.all(B >= 0, axis=0))
@@ -83,7 +82,7 @@ if __name__ == '__main__':
     zbuffer = -1000*np.ones((height,width))
     coords = np.mgrid[0:width, 0:height].astype(int)
 
-    V, T, Vi, Ti = obj_load("head.obj")
+    V, UV, Vi, UVi = obj_load("head.obj")
     texture = np.asarray(PIL.Image.open('uv-grid.png'))
     viewport = viewport(32, 32, width-64, height-64, 1000)
     modelview = lookat(eye, center, up)
@@ -92,19 +91,21 @@ if __name__ == '__main__':
     V = Vh @ modelview.T           # World coordinates
     Vs = V @ viewport.T            # Screen coordinates
     V, Vs = V[:,:3],  Vs[:,:3]
+
+    # Pre-compute tri-linear coordinates
+    T = np.transpose(Vs[Vi], axes=[0,2,1])
+    T[:,2,:] = 1
+    T = np.linalg.inv(T)
+
+    # Pre-compute normal vectors and intensity
+    N = np.cross(V[Vi][:,2]-V[Vi][:,0], V[Vi][:,1]-V[Vi][:,0])
+    N = N / np.linalg.norm(N,axis=1).reshape(len(N),1)
+    I = np.dot(N, light)
     
     start = time.time()
-    for (i0,i1,i2), (j0,j1,j2) in zip(Vi,Ti):
-        v0, v1, v2 = V[i0], V[i1], V[i2]
-        vs0, vs1, vs2 = Vs[i0], Vs[i1], Vs[i2]
-        uv0, uv1, uv2 = T[j0], T[j1], T[j2]
-
-        n = cross(v2-v0, v1-v0)
-        n = n / np.sqrt(n[0]*n[0]+n[1]*n[1]+n[2]*n[2])
-        intensity = np.dot(n, light)
-        
-        if intensity >= 0:
-            triangle((vs0,uv0), (vs1,uv1), (vs2,uv2), intensity)
+    for t, i, (v0,v1,v2),(vs0,vs1,vs2),(uv0,uv1,uv2) in zip(T, I, V[Vi], Vs[Vi], UV[UVi]):
+        if i >= 0:
+            triangle(t, (vs0,uv0), (vs1,uv1), (vs2,uv2), i)
     end = time.time()
     
     print("Rendering time: {}".format(end-start))
