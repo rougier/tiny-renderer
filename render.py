@@ -12,7 +12,7 @@ def triangle(t, A, B, C, intensity):
     ymin = int(max(0,              min(v0[1], v1[1], v2[1])))
     ymax = int(min(image.shape[0], max(v0[1], v1[1], v2[1])+1))
     P = coords[:, xmin:xmax, ymin:ymax].reshape(2,-1)
-    B = np.dot(t, np.vstack((P, np.ones((1, P.shape[1]), dtype=int))))
+    B = np.dot(t, np.vstack((P, np.ones((1, P.shape[1])))))
 
     # Cartesian coordinates of points inside the triangle
     I = np.argwhere(np.all(B >= 0, axis=0))
@@ -79,6 +79,7 @@ if __name__ == '__main__':
     viewport = viewport(32, 32, width-64, height-64, 1000)
     modelview = lookat(eye, center, up)
 
+    start = time.time()
     Vh = np.c_[V, np.ones(len(V))] # Homogenous coordinates
     V = Vh @ modelview.T           # World coordinates
     Vs = V @ viewport.T            # Screen coordinates
@@ -95,7 +96,6 @@ if __name__ == '__main__':
     N = N / np.linalg.norm(N,axis=1).reshape(len(N),1)
     I = np.dot(N, light)
 
-    start = time.time()
     for i in np.argwhere(I>=0)[:,0]:
         (vs0, vs1, vs2), (uv0, uv1, uv2) = Vs[i], UV[i]
         triangle(T[i], (vs0,uv0), (vs1,uv1), (vs2,uv2), I[i])
